@@ -83,11 +83,6 @@ const getData = async (req, res) => {
     });
 };
 
-// Update
-const putData = async (req, res) => {
-  res.send("test");
-};
-
 // Delete
 const deleteData = async (req, res) => {
   try {

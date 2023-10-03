@@ -15,7 +15,6 @@ const dataRoute = require("./src/routes/dataRoute");
 const usersRoute = require("./src/routes/usersRoute");
 
 app.use(cors);
-
 app.use("/data", dataRoute);
 app.use("/users", usersRoute);
 
