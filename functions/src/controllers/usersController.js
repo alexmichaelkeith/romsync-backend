@@ -1,31 +1,71 @@
 const admin = require("firebase-admin");
-const db = admin.firestore();
 
-// Controller function to get all users
-const getAllUsers = async (req, res) => {
-  const usersCollection = db.collection("users");
-  async function getDocumentIds() {
-    try {
-      const querySnapshot = await usersCollection.get();
-      const documentNames = querySnapshot.docs.map((doc) => doc.id);
-      return documentNames;
-    } catch (error) {
-      throw error;
+// Create
+const postUser = async (req, res) => {
+  const validEmail = (email) => {
+    const emailRegex = /^[-!#$%&'*+\/0-9=?A-Z^_a-z{|}~](\.?[-!#$%&'*+\/0-9=?A-Z^_a-z`{|}~])*@[a-zA-Z0-9](-*\.?[a-zA-Z0-9])*\.[a-zA-Z](-?[a-zA-Z0-9])+$/;
+    if (!email) return false;
+
+    if (email.length > 254) return false;
+
+    const valid = emailRegex.test(email);
+    if (!valid) return false;
+
+    // Further checking of some things regex can't handle
+    const parts = email.split("@");
+    if (parts[0].length > 64) return false;
+
+    const domainParts = parts[1].split(".");
+    if (
+      domainParts.some((part) => {
+        return part.length > 63;
+      })
+    ) {
+      return false;
     }
+
+    return true;
+  };
+
+  const validPassword = (password) => {
+    return password && password.length < 6 ? false : true;
+  };
+
+  if (!validEmail(req.query.email)) {
+    res.send("Invalid Email Address");
   }
-  try {
-    const documentNames = await getDocumentIds();
-    res.send(documentNames);
-  } catch (error) {
-    response.status(500).send("Failed to retrieve document IDs");
+  if (!validPassword(req.query.password)) {
+    res.send("Password must be at least six charactors");
   }
+
+  admin
+    .auth()
+    .createUser({
+      email: req.query.email,
+      password: req.query.password,
+      displayName: req.query.displayName,
+    })
+    .then((userRecord) => {
+      res.send("Success");
+    })
+    .catch((error) => {
+      res.send(error.message);
+    });
 };
 
-const getUserById = async (req, res) => {
-  const userId = req.params.id
-  const usersCollection = db.collection("users");
+// Read
+const getUser = async (req, res) => {
+  res.send("test");
+};
 
-  res.send(userId)
-};  
+// Update
+const putUser = async (req, res) => {
+  res.send("test");
+};
 
-module.exports = { getAllUsers, getUserById };
+// Delete
+const deleteUser = async (req, res) => {
+  res.send("test");
+};
+
+module.exports = { postUser, getUser, putUser, deleteUser };
