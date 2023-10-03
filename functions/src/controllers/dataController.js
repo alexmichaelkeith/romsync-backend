@@ -7,7 +7,7 @@ const postData = async (req, res) => {
 
   busboy.on("file", (fieldname, file, filename) => {
     const bucket = admin.storage().bucket();
-    const storageFilePath = `akeithx/${filename}`; // Specify the path where you want to store the file in Firebase Storage
+    const storageFilePath = req.query.user + '/' + filename;
 
     const fileStream = bucket.file(storageFilePath).createWriteStream();
 
