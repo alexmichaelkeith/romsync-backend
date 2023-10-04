@@ -102,4 +102,4 @@ const deleteData = async (req, res) => {
   }
 };
 
-module.exports = { postData, getData, putData, deleteData };
+module.exports = { postData, getData, deleteData };
