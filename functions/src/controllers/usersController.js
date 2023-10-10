@@ -1,7 +1,19 @@
 const admin = require("firebase-admin");
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const functions = require('firebase-functions');
+
+
+function generateToken(email) {
+  const payload = { email };
+  const secretKey = process.env.JWT_SECRET;
+  const token = jwt.sign(payload, secretKey);
+  return token;
+}
 
 // Create
 const postUser = async (req, res) => {
+  
   const validEmail = (email) => {
     const emailRegex = /^[-!#$%&'*+\/0-9=?A-Z^_a-z{|}~](\.?[-!#$%&'*+\/0-9=?A-Z^_a-z`{|}~])*@[a-zA-Z0-9](-*\.?[a-zA-Z0-9])*\.[a-zA-Z](-?[a-zA-Z0-9])+$/;
     if (!email) return false;
@@ -23,7 +35,6 @@ const postUser = async (req, res) => {
     ) {
       return false;
     }
-
     return true;
   };
 
@@ -32,30 +43,53 @@ const postUser = async (req, res) => {
   };
 
   if (!validEmail(req.query.email)) {
-    res.send("Invalid Email Address");
+    return res.status(400).json("Email is invalid");
   }
   if (!validPassword(req.query.password)) {
-    res.send("Password must be at least six charactors");
+    return res.status(400).send("Password is invalid");
   }
 
-  admin
-    .auth()
-    .createUser({
-      email: req.query.email,
-      password: req.query.password,
-      displayName: req.query.displayName,
-    })
-    .then((userRecord) => {
-      res.send("Success");
-    })
-    .catch((error) => {
-      res.send(error.message);
-    });
+
+  // Hash the user's password
+  const hashedPassword = await bcrypt.hash(req.query.password, 10);
+
+  // Store the user in Firestore
+  const userRef = admin.firestore().collection('users').doc(req.query.email);
+  await userRef.set({ email: req.query.email, password: hashedPassword });
+
+  res.status(201).send('User registered successfully');
+  
 };
+
+
+
 
 // Read
 const getUser = async (req, res) => {
-  res.send("test");
+  
+  const email = req.query.email
+  const password = req.query.password
+
+  // Retrieve the user from Firestore
+  const userRef = admin.firestore().collection('users').doc(email);
+  const snapshot = await userRef.get();
+
+  if (!snapshot.exists) {
+    return res.status(401).send('Invalid email or password');
+  }
+
+  const userData = snapshot.data();
+  // Compare the input password with the stored password hash
+  const passwordMatch = await bcrypt.compare(password, userData.password);
+
+  if (!passwordMatch) {
+    return res.status(401).send('Invalid email or password');
+  }
+
+  const token = generateToken(email);
+
+  res.status(200).send(token);
+
 };
 
 // Update

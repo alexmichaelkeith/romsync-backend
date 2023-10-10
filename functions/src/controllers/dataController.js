@@ -1,5 +1,7 @@
 const admin = require("firebase-admin");
 const Busboy = require("busboy");
+const jwt = require('jsonwebtoken');
+const functions = require('firebase-functions');
 
 // Create
 const postData = async (req, res) => {
@@ -15,11 +17,11 @@ const postData = async (req, res) => {
 
     fileStream.on("error", (err) => {
       console.error("Error uploading file:", err);
-      res.status(500).json({ error: "Error uploading file" });
+      return res.status(500).json({ error: "Error uploading file" });
     });
 
     fileStream.on("finish", () => {
-      res.status(200).json({ message: "File uploaded successfully" });
+      return res.status(200).json({ message: "File uploaded successfully" });
     });
   });
 
@@ -28,6 +30,19 @@ const postData = async (req, res) => {
 
 // Read
 const getData = async (req, res) => {
+
+  const token = req.query.authorization;
+  if (!token) {
+    return res.status(401).send('Unauthorized');
+  }
+  const secretKey = process.env.JWT_SECRET;
+
+  jwt.verify(token, secretKey, (err, user) => {
+    if (err) {
+      return res.status(403).send('Invalid token');
+    }
+  });
+
   if (!req.query.fileName) {
     try {
       const directory = req.query.directory;
@@ -57,10 +72,10 @@ const getData = async (req, res) => {
         }
       }
 
-      res.json({ files: fileDetails });
+      return res.json({ files: fileDetails });
     } catch (error) {
       console.error("Error listing files:", error);
-      res.status(500).send("Error listing files");
+      return res.status(500).send("Error listing files");
     }
   }
 
@@ -75,11 +90,11 @@ const getData = async (req, res) => {
     .download()
     .then((data) => {
       const fileContent = data[0];
-      res.send(fileContent);
+      return res.send(fileContent);
     })
     .catch((error) => {
       console.error("Error reading file:", error);
-      res.status(500).send("Error reading file");
+      return res.status(500).send("Error reading file");
     });
 };
 
@@ -97,8 +112,7 @@ const deleteData = async (req, res) => {
 
     res.status(204).send(); // No content, successful deletion
   } catch (error) {
-    console.error("Error deleting file:", error);
-    res.status(500).send("Error deleting file");
+    return res.status(500).send("Error deleting file");
   }
 };
 
