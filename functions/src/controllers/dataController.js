@@ -1,15 +1,14 @@
 const admin = require("firebase-admin");
 const Busboy = require("busboy");
 const jwt = require('jsonwebtoken');
-const functions = require('firebase-functions');
 
 // Create
 const postData = async (req, res) => {
-  const busboy = new Busboy({ headers: req.headers });
+  const bb = Busboy({ headers: req.headers });
 
-  busboy.on("file", (fieldname, file, filename) => {
+  bb.on('file', (name, file, info) => {
     const bucket = admin.storage().bucket();
-    const storageFilePath = req.query.user + '/' + filename;
+    const storageFilePath = req.query.user + '/' + info.filename;
 
     const fileStream = bucket.file(storageFilePath).createWriteStream();
 
@@ -25,7 +24,7 @@ const postData = async (req, res) => {
     });
   });
 
-  busboy.end(req.rawBody);
+  bb.end(req.rawBody);
 };
 
 // Read
