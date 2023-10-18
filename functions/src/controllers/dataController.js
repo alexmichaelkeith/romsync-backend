@@ -1,17 +1,20 @@
 const admin = require("firebase-admin");
 const Busboy = require("busboy");
-const jwt = require('jsonwebtoken');
-
+const jwt = require("jsonwebtoken");
 // Create
 const postData = async (req, res) => {
-  const bb = Busboy({ headers: req.headers });
-
-  bb.on('file', (name, file, info) => {
+  const bb = Busboy({ headers: req.headers, limits:{fileSize: 50 * 1024 * 1024,}}); //50mb
+  bb.on("file", (name, file, info) => {
     const bucket = admin.storage().bucket();
-    const storageFilePath = req.query.user + '/' + info.filename;
+    const storageFilePath = req.headers.user + "/" + req.headers.filename;
 
-    const fileStream = bucket.file(storageFilePath).createWriteStream();
+    const customMetadata = {
+      lastModified: req.headers.lastmodified,
+    };
 
+    const fileStream = bucket
+      .file(storageFilePath)
+      .createWriteStream({ metadata: { metadata: customMetadata } });
     file.pipe(fileStream);
 
     fileStream.on("error", (err) => {
@@ -29,18 +32,17 @@ const postData = async (req, res) => {
 
 // Read
 const getData = async (req, res) => {
-
   const token = req.query.authorization;
   if (!token) {
-    return res.status(401).send('Unauthorized');
+    return res.status(401).send("Unauthorized");
   }
   const secretKey = process.env.JWT_SECRET;
 
-  jwt.verify(token, secretKey, (err, user) => {
+  /*jwt.verify(token, secretKey, (err, user) => {
     if (err) {
-      return res.status(403).send('Invalid token');
+      return res.status(403).send("Invalid token");
     }
-  });
+  });*/
 
   if (!req.query.fileName) {
     try {
@@ -60,10 +62,22 @@ const getData = async (req, res) => {
         const lastUpdated = metadata.updated;
         const location = file.name;
         const fileName = location.substring(location.lastIndexOf("/") + 1);
+        const getLastModified =  await file
+          .getMetadata()
+          .then((data) => {
+            const customMetadata = data[0].metadata; // Access custom metadata
+            return customMetadata.lastModified;
+          })
+          .catch((error) => {
+            console.error("Error getting metadata:", error);
+            return undefined
+          });
+
         // Add file details to the array
         if (fileName) {
           fileDetails.push({
-            name: fileName,
+            fileName: fileName,
+            lastModified: getLastModified,
             lastUpdated: lastUpdated,
             location: location,
             size: metadata.size,
@@ -71,30 +85,35 @@ const getData = async (req, res) => {
         }
       }
 
-      return res.json({ files: fileDetails });
+      return res.json(fileDetails);
     } catch (error) {
       console.error("Error listing files:", error);
       return res.status(500).send("Error listing files");
     }
   }
+  
 
-  const bucket = admin.storage().bucket();
+  
+  try {
+    const bucket = admin.storage().bucket();
+    const file = bucket.file('akeithx/'+req.headers.filename);
+    const stream = file.createReadStream();
+    stream.pipe(res);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send(error);
+  }
 
-  const directory = req.query.directory + "/" + req.query.fileName;
 
-  const file = bucket.file(directory);
 
-  // Read the file from Firebase Storage
-  file
-    .download()
-    .then((data) => {
-      const fileContent = data[0];
-      return res.send(fileContent);
-    })
-    .catch((error) => {
-      console.error("Error reading file:", error);
-      return res.status(500).send("Error reading file");
-    });
+
+
+  
+
+
+
+
+
 };
 
 // Delete
