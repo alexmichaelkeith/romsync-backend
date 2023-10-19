@@ -3,14 +3,30 @@ const Busboy = require("busboy");
 const jwt = require("jsonwebtoken");
 // Create
 const postData = async (req, res) => {
+  const token = req.headers.authorization;
+  if (!token) {
+    return res.status(401).send("Unauthorized");
+  }
+  const secretKey = process.env.JWT_SECRET;
+
+  // REPLACE WITH SAFE ID NOT EMAIL BACKSLASH ISSUE
+  const user = jwt.verify(token, secretKey, (err, user) => {
+    if (err) {
+      return res.status(403).send("Invalid token");
+    }
+    return user.email;
+  });
+
   const bb = Busboy({
     headers: req.headers,
     limits: { fileSize: 50 * 1024 * 1024 },
   }); //50mb
   bb.on("file", (name, file, info) => {
     const bucket = admin.storage().bucket();
-    const storageFilePath = req.headers.user + "/" + req.headers.filename;
+    const prefix = `${user}/`;
 
+    const storageFilePath = prefix + req.headers.filename;
+    console.log(storageFilePath)
     const customMetadata = {
       lastModified: req.headers.lastmodified,
       createdtime: req.headers.createdtime,
@@ -42,20 +58,21 @@ const getData = async (req, res) => {
   }
   const secretKey = process.env.JWT_SECRET;
 
-  jwt.verify(token, secretKey, (err, user) => {
+  // REPLACE WITH SAFE ID NOT EMAIL BACKSLASH ISSUE
+  const user = jwt.verify(token, secretKey, (err, user) => {
     if (err) {
       return res.status(403).send("Invalid token");
     }
+    return user.email;
   });
 
   if (!req.query.fileName) {
     try {
-      const directory = req.query.directory;
       // Get a reference to your Firebase Storage bucket
       const bucket = admin.storage().bucket();
 
       // Specify the prefix (directory) you want to list files from
-      const prefix = `${directory}/`;
+      const prefix = `${user}/`;
       // List all files in the specified directory
       const [files] = await bucket.getFiles({ prefix });
       const fileDetails = [];
@@ -109,7 +126,8 @@ const getData = async (req, res) => {
 
   try {
     const bucket = admin.storage().bucket();
-    const file = bucket.file("akeithx/" + req.headers.filename);
+    const prefix = `${user}/`;
+    const file = bucket.file(prefix + req.headers.filename);
     const metadata = await file.getMetadata();
     const stream = file.createReadStream();
     res.set({

@@ -1,7 +1,6 @@
 const admin = require("firebase-admin");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const functions = require('firebase-functions');
 
 
 function generateToken(email) {
@@ -14,6 +13,10 @@ function generateToken(email) {
 // Create
 const postUser = async (req, res) => {
   
+  const username = req.headers.username
+  const email = req.headers.email
+  const password = req.headers.password
+
   const validEmail = (email) => {
     const emailRegex = /^[-!#$%&'*+\/0-9=?A-Z^_a-z{|}~](\.?[-!#$%&'*+\/0-9=?A-Z^_a-z`{|}~])*@[a-zA-Z0-9](-*\.?[a-zA-Z0-9])*\.[a-zA-Z](-?[a-zA-Z0-9])+$/;
     if (!email) return false;
@@ -42,20 +45,27 @@ const postUser = async (req, res) => {
     return password && password.length < 6 ? false : true;
   };
 
-  if (!validEmail(req.query.email)) {
+  const validUsername = (username) => {
+    const regex = /^[a-zA-Z0-9]+$/;
+    return username && username.length < 10 && regex.test(username) ? true : false;
+  };
+
+
+  if (!validEmail(email)) {
     return res.status(400).json("Email is invalid");
   }
-  if (!validPassword(req.query.password)) {
+  if (!validPassword(password)) {
     return res.status(400).send("Password is invalid");
   }
-
-
+  if (!validUsername(username)) {
+    return res.status(400).send("Username is invalid");
+  }
   // Hash the user's password
-  const hashedPassword = await bcrypt.hash(req.query.password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
 
   // Store the user in Firestore
-  const userRef = admin.firestore().collection('users').doc(req.query.email);
-  await userRef.set({ email: req.query.email, password: hashedPassword });
+  const userRef = admin.firestore().collection('users').doc(username);
+  await userRef.set({ username: username,email: email, password: hashedPassword });
 
   res.status(201).send('User registered successfully');
   
@@ -67,15 +77,14 @@ const postUser = async (req, res) => {
 // Read
 const getUser = async (req, res) => {
   
-  const email = req.query.email
-  const password = req.query.password
-
+  const password = req.headers.password
+  const username = req.headers.username
   // Retrieve the user from Firestore
-  const userRef = admin.firestore().collection('users').doc(email);
+  const userRef = admin.firestore().collection('users').doc(username);
   const snapshot = await userRef.get();
 
   if (!snapshot.exists) {
-    return res.status(401).send('Invalid email or password');
+    return res.status(401).send('Invalid username or password');
   }
 
   const userData = snapshot.data();
@@ -83,10 +92,10 @@ const getUser = async (req, res) => {
   const passwordMatch = await bcrypt.compare(password, userData.password);
 
   if (!passwordMatch) {
-    return res.status(401).send('Invalid email or password');
+    return res.status(401).send('Invalid username or password');
   }
 
-  const token = generateToken(email);
+  const token = generateToken(username);
 
   res.status(200).send(token);
 
