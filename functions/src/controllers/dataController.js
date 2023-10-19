@@ -3,13 +3,17 @@ const Busboy = require("busboy");
 const jwt = require("jsonwebtoken");
 // Create
 const postData = async (req, res) => {
-  const bb = Busboy({ headers: req.headers, limits:{fileSize: 50 * 1024 * 1024,}}); //50mb
+  const bb = Busboy({
+    headers: req.headers,
+    limits: { fileSize: 50 * 1024 * 1024 },
+  }); //50mb
   bb.on("file", (name, file, info) => {
     const bucket = admin.storage().bucket();
     const storageFilePath = req.headers.user + "/" + req.headers.filename;
 
     const customMetadata = {
       lastModified: req.headers.lastmodified,
+      createdtime: req.headers.createdtime,
     };
 
     const fileStream = bucket
@@ -62,7 +66,7 @@ const getData = async (req, res) => {
         const lastUpdated = metadata.updated;
         const location = file.name;
         const fileName = location.substring(location.lastIndexOf("/") + 1);
-        const getLastModified =  await file
+        const getLastModified = await file
           .getMetadata()
           .then((data) => {
             const customMetadata = data[0].metadata; // Access custom metadata
@@ -70,7 +74,17 @@ const getData = async (req, res) => {
           })
           .catch((error) => {
             console.error("Error getting metadata:", error);
-            return undefined
+            return undefined;
+          });
+        const ctime = await file
+          .getMetadata()
+          .then((data) => {
+            const customMetadata = data[0].metadata; // Access custom metadata
+            return customMetadata.createdtime;
+          })
+          .catch((error) => {
+            console.error("Error getting metadata:", error);
+            return undefined;
           });
 
         // Add file details to the array
@@ -78,6 +92,7 @@ const getData = async (req, res) => {
           fileDetails.push({
             fileName: fileName,
             lastModified: getLastModified,
+            createdtime: ctime,
             lastUpdated: lastUpdated,
             location: location,
             size: metadata.size,
@@ -91,29 +106,21 @@ const getData = async (req, res) => {
       return res.status(500).send("Error listing files");
     }
   }
-  
 
-  
   try {
     const bucket = admin.storage().bucket();
-    const file = bucket.file('akeithx/'+req.headers.filename);
+    const file = bucket.file("akeithx/" + req.headers.filename);
+    const metadata = await file.getMetadata();
     const stream = file.createReadStream();
+    res.set({
+      lastmodified: metadata[0].metadata.lastModified,
+      createdtime: metadata[0].metadata.createdtime,
+    });
     stream.pipe(res);
   } catch (error) {
     console.error(error);
     res.status(500).send(error);
   }
-
-
-
-
-
-  
-
-
-
-
-
 };
 
 // Delete
