@@ -32,17 +32,17 @@ const postData = async (req, res) => {
 
 // Read
 const getData = async (req, res) => {
-  const token = req.query.authorization;
+  const token = req.headers.authorization;
   if (!token) {
     return res.status(401).send("Unauthorized");
   }
   const secretKey = process.env.JWT_SECRET;
 
-  /*jwt.verify(token, secretKey, (err, user) => {
+  jwt.verify(token, secretKey, (err, user) => {
     if (err) {
       return res.status(403).send("Invalid token");
     }
-  });*/
+  });
 
   if (!req.query.fileName) {
     try {
