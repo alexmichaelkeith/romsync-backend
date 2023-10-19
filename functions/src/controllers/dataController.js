@@ -58,7 +58,6 @@ const getData = async (req, res) => {
   }
   const secretKey = process.env.JWT_SECRET;
 
-  // REPLACE WITH SAFE ID NOT EMAIL BACKSLASH ISSUE
   const user = jwt.verify(token, secretKey, (err, user) => {
     if (err) {
       return res.status(403).send("Invalid token");
@@ -66,7 +65,7 @@ const getData = async (req, res) => {
     return user.email;
   });
 
-  if (!req.query.fileName) {
+  if (!req.headers.filename) {
     try {
       // Get a reference to your Firebase Storage bucket
       const bucket = admin.storage().bucket();
@@ -130,6 +129,7 @@ const getData = async (req, res) => {
     const file = bucket.file(prefix + req.headers.filename);
     const metadata = await file.getMetadata();
     const stream = file.createReadStream();
+    console.log('test',metadata[0])
     res.set({
       lastmodified: metadata[0].metadata.lastModified,
       createdtime: metadata[0].metadata.createdtime,
@@ -146,7 +146,7 @@ const deleteData = async (req, res) => {
   try {
     const bucket = admin.storage().bucket();
 
-    const directory = req.query.directory;
+    //const directory = req.query.directory;
 
     const file = bucket.file(directory);
 

@@ -65,7 +65,7 @@ const postUser = async (req, res) => {
 
   // Store the user in Firestore
   const userRef = admin.firestore().collection('users').doc(username);
-  await userRef.set({ username: username,email: email, password: hashedPassword });
+  await userRef.set({ username: username, email: email, password: hashedPassword });
 
   res.status(201).send('User registered successfully');
   
