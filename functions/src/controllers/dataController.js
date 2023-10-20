@@ -19,14 +19,12 @@ const postData = async (req, res) => {
 
   const bb = Busboy({
     headers: req.headers,
-    limits: { fileSize: 50 * 1024 * 1024 },
-  }); //50mb
+  });
   bb.on("file", (name, file, info) => {
     const bucket = admin.storage().bucket();
     const prefix = `${user}/`;
 
     const storageFilePath = prefix + req.headers.filename;
-    console.log(storageFilePath)
     const customMetadata = {
       lastModified: req.headers.lastmodified,
       createdtime: req.headers.createdtime,
@@ -129,7 +127,6 @@ const getData = async (req, res) => {
     const file = bucket.file(prefix + req.headers.filename);
     const metadata = await file.getMetadata();
     const stream = file.createReadStream();
-    console.log('test',metadata[0])
     res.set({
       lastmodified: metadata[0].metadata.lastModified,
       createdtime: metadata[0].metadata.createdtime,
