@@ -3,8 +3,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 
-function generateToken(email) {
-  const payload = { email };
+function generateToken(username) {
+  const payload = { username };
   const secretKey = process.env.JWT_SECRET;
   const token = jwt.sign(payload, secretKey);
   return token;

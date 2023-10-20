@@ -14,7 +14,7 @@ const postData = async (req, res) => {
     if (err) {
       return res.status(403).send("Invalid token");
     }
-    return user.email;
+    return user.username;
   });
 
   const bb = Busboy({
@@ -23,7 +23,7 @@ const postData = async (req, res) => {
   bb.on("file", (name, file, info) => {
     const bucket = admin.storage().bucket();
     const prefix = `${user}/`;
-
+    
     const storageFilePath = prefix + req.headers.filename;
     const customMetadata = {
       lastModified: req.headers.lastmodified,
@@ -51,6 +51,7 @@ const postData = async (req, res) => {
 // Read
 const getData = async (req, res) => {
   const token = req.headers.authorization;
+  const filename = req.headers.filename
   if (!token) {
     return res.status(401).send("Unauthorized");
   }
@@ -60,10 +61,9 @@ const getData = async (req, res) => {
     if (err) {
       return res.status(403).send("Invalid token");
     }
-    return user.email;
+    return user.username;
   });
-
-  if (!req.headers.filename) {
+  if (!filename) {
     try {
       // Get a reference to your Firebase Storage bucket
       const bucket = admin.storage().bucket();
@@ -73,7 +73,6 @@ const getData = async (req, res) => {
       // List all files in the specified directory
       const [files] = await bucket.getFiles({ prefix });
       const fileDetails = [];
-
       // Iterate through the list of files and fetch metadata for each file
       for (const file of files) {
         const [metadata] = await file.getMetadata();
